@@ -1,0 +1,151 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   AImagino design tokens (HSL triplets, consumed by tailwind.config.js)
+   Light palette on :root; dark palette via system preference or
+   an explicit data-theme="dark" stamp.
+------------------------------------------------------------------- */
+:root {
+  --background: 228 33% 98%;
+  --surface: 0 0% 100%;
+  --subtle: 228 32% 96%;
+  --foreground: 231 38% 12%;
+  --muted: 228 30% 95%;
+  --muted-foreground: 228 12% 43%;
+  --border: 228 24% 90%;
+  --input: 228 22% 86%;
+  --ring: 234 72% 55%;
+  --primary: 234 70% 52%;
+  --primary-foreground: 0 0% 100%;
+  --primary-soft: 234 90% 96%;
+  --accent: 234 60% 97%;
+  --accent-foreground: 234 60% 40%;
+  --hot: 4 74% 50%;
+  --hot-soft: 6 90% 96%;
+  --warm: 32 90% 42%;
+  --warm-soft: 40 95% 93%;
+  --cold: 208 42% 46%;
+  --cold-soft: 208 60% 95%;
+  --success: 152 62% 34%;
+  --success-soft: 150 55% 94%;
+  --danger: 356 72% 50%;
+  --danger-soft: 356 90% 96%;
+  --whatsapp: 145 63% 36%;
+  --wa-bubble: 106 60% 91%;
+  --wa-ground: 36 28% 94%;
+  --shadow: 231 40% 20%;
+  /* validated categorical chart palette (dataviz validator: light) */
+  --c1: #2f40da;
+  --c2: #0a9480;
+  --c3: #de2e21;
+  --c-grid: #e3e6f0;
+  --c-axis: #6b7190;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --background: 231 30% 7%;
+    --surface: 231 26% 10%;
+    --subtle: 231 22% 13%;
+    --foreground: 228 30% 94%;
+    --muted: 231 22% 14%;
+    --muted-foreground: 228 14% 64%;
+    --border: 231 18% 19%;
+    --input: 231 16% 24%;
+    --ring: 234 85% 70%;
+    --primary: 234 86% 68%;
+    --primary-foreground: 231 40% 8%;
+    --primary-soft: 234 40% 17%;
+    --accent: 234 30% 15%;
+    --accent-foreground: 234 90% 82%;
+    --hot: 4 84% 64%;
+    --hot-soft: 4 40% 15%;
+    --warm: 36 90% 60%;
+    --warm-soft: 36 40% 14%;
+    --cold: 208 60% 68%;
+    --cold-soft: 208 30% 15%;
+    --success: 150 55% 55%;
+    --success-soft: 150 30% 13%;
+    --danger: 356 80% 66%;
+    --danger-soft: 356 40% 15%;
+    --whatsapp: 145 55% 50%;
+    --wa-bubble: 150 34% 19%;
+    --wa-ground: 231 24% 9%;
+    --shadow: 231 60% 2%;
+    --c1: #6775f4;
+    --c2: #1fa892;
+    --c3: #e5483f;
+    --c-grid: #242838;
+    --c-axis: #9097b3;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --background: 231 30% 7%;
+  --surface: 231 26% 10%;
+  --subtle: 231 22% 13%;
+  --foreground: 228 30% 94%;
+  --muted: 231 22% 14%;
+  --muted-foreground: 228 14% 64%;
+  --border: 231 18% 19%;
+  --input: 231 16% 24%;
+  --ring: 234 85% 70%;
+  --primary: 234 86% 68%;
+  --primary-foreground: 231 40% 8%;
+  --primary-soft: 234 40% 17%;
+  --accent: 234 30% 15%;
+  --accent-foreground: 234 90% 82%;
+  --hot: 4 84% 64%;
+  --hot-soft: 4 40% 15%;
+  --warm: 36 90% 60%;
+  --warm-soft: 36 40% 14%;
+  --cold: 208 60% 68%;
+  --cold-soft: 208 30% 15%;
+  --success: 150 55% 55%;
+  --success-soft: 150 30% 13%;
+  --danger: 356 80% 66%;
+  --danger-soft: 356 40% 15%;
+  --whatsapp: 145 55% 50%;
+  --wa-bubble: 150 34% 19%;
+  --wa-ground: 231 24% 9%;
+  --shadow: 231 60% 2%;
+  --c1: #6775f4;
+  --c2: #1fa892;
+  --c3: #e5483f;
+  --c-grid: #242838;
+  --c-axis: #9097b3;
+  color-scheme: dark;
+}
+
+@layer base {
+  html, body, #root { height: 100%; }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: 14px;
+    font-feature-settings: "ss01", "cv11";
+  }
+  h1, h2, h3, h4 { @apply font-display tracking-tight; text-wrap: balance; }
+  * { @apply border-border; }
+  :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
+  ::selection { background: hsl(var(--primary) / 0.2); }
+}
+
+@layer utilities {
+  .num { font-variant-numeric: tabular-nums; }
+  .eyebrow { @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground; }
+  .scrollbar-thin { scrollbar-width: thin; }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .wa-pattern {
+    background-color: hsl(var(--wa-ground));
+    background-image: radial-gradient(hsl(var(--foreground) / 0.045) 1px, transparent 1px);
+    background-size: 14px 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
