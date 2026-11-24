@@ -1,8 +1,10 @@
 import { RouterProvider, matchPath, useRouter } from "@/lib/router";
 import { DemoProvider } from "@/store/demo-store";
 import { AppShell } from "@/components/layout/app-shell";
+import { AuthGate } from "@/components/auth-gate";
 import { Toaster } from "@/components/shared/toaster";
 import LandingPage from "@/pages/landing";
+import EnquirePage from "@/pages/enquire";
 import OverviewPage from "@/pages/app/overview";
 import LeadsPage from "@/pages/app/leads";
 import LeadProfilePage from "@/pages/app/lead-profile";
@@ -17,6 +19,7 @@ import NotFound from "@/pages/app/not-found";
 
 function Routes() {
   const { path } = useRouter();
+  if (path === "/enquire") return <EnquirePage />;
   if (!path.startsWith("/app")) return <LandingPage />;
 
   let page: React.ReactNode;
@@ -34,7 +37,7 @@ function Routes() {
   else if (path === "/app/settings") page = <SettingsPage />;
   else page = <NotFound />;
 
-  return <AppShell key="shell">{page}</AppShell>;
+  return <AuthGate><AppShell key="shell">{page}</AppShell></AuthGate>;
 }
 
 export default function App() {

@@ -23,6 +23,33 @@ npm run build:single # ONE self-contained HTML file in dist-single/index.html
 npm run preview      # serve the production build
 ```
 
+## Working zero-cost intake
+
+Open `/#/enquire` to use the real property-enquiry form. Submissions are qualified, scored, matched to listings and persisted in the browser workspace. They appear immediately in Leads and Conversations.
+
+For cross-device delivery, copy `.env.example` to `.env.local` and set `VITE_LEAD_WEBHOOK_URL` to an HTTPS endpoint such as a Google Apps Script web app. Each submission sends `{ lead, message }` as JSON while retaining a local copy.
+
+### Supabase Free central database and login
+
+1. Create a Supabase project and run `supabase/schema.sql` in its SQL editor.
+2. Create the agency user under Authentication → Users.
+3. Insert that user's UUID and a workspace slug into `workspace_members` using the final statement documented in the schema.
+4. Copy `.env.example` to `.env.local` and set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and the matching `VITE_WORKSPACE_SLUG`.
+5. Rebuild the app. Public enquiries will be stored centrally, and `/#/app` will require the agency user's login.
+
+The browser receives only Supabase's public anonymous key. Row-level security restricts dashboard reads to users assigned to the matching workspace.
+
+### Optional production integrations on Vercel
+
+`api/lead.js` is a server-side lead-delivery endpoint. Configure only the integrations the agency owns:
+
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `WORKSPACE_SLUG` for server-side central storage.
+- `HUBSPOT_PRIVATE_APP_TOKEN` for contact upsert into the existing CRM.
+- `RESEND_API_KEY`, `LEAD_NOTIFICATION_EMAIL`, `LEAD_FROM_EMAIL` for real new-lead email alerts.
+- `ALLOWED_ORIGIN` to restrict production submissions to the deployed site origin.
+
+Secrets must be stored in Vercel project environment variables, never in `VITE_*` variables or committed files. Appointments include an **Add to Google** action that opens a pre-filled real Google Calendar event without requiring paid infrastructure.
+
 `dist-single/index.html` can be emailed, hosted on any static host, or opened straight from disk.
 
 ## Before you send it to a prospect

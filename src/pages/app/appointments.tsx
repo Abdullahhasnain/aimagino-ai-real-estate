@@ -28,6 +28,14 @@ function startOfDay(d: Date) {
   return x;
 }
 
+function googleCalendarUrl(a: Appointment, title: string, details: string) {
+  const start = new Date(a.at);
+  const end = new Date(start.getTime() + a.durationMin * 60_000);
+  const stamp = (date: Date) => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
+  const query = new URLSearchParams({ action: "TEMPLATE", text: title, dates: `${stamp(start)}/${stamp(end)}`, location: a.location, details });
+  return `https://calendar.google.com/calendar/render?${query.toString()}`;
+}
+
 export default function AppointmentsPage() {
   const { state, actions } = useDemo();
   const [weekOffset, setWeekOffset] = React.useState(0);
@@ -106,7 +114,8 @@ export default function AppointmentsPage() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Button size="sm" variant="outline" onClick={() => window.open(googleCalendarUrl(a, `${a.type} · ${lead?.name ?? "Property lead"}`, prop ? `${prop.building}, ${prop.community} · ${prop.ref}` : a.location), "_blank", "noopener,noreferrer")}><CalendarPlus />Add to Google</Button>
                 <Button size="sm" variant="outline" onClick={() => setRescheduling(a)}><CalendarClock />Reschedule</Button>
                 <Button size="sm" variant="outline" onClick={() => setAssigning(a)}><UserCheck />Assign</Button>
                 <Button size="sm" variant="destructive" onClick={() => setConfirmCancel(true)}><CalendarX />Cancel</Button>

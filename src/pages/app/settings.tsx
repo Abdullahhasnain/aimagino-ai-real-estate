@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useDemo } from "@/store/demo-store";
 import { HOT_THRESHOLD, SCORE_WEIGHTS, WARM_THRESHOLD } from "@/services/ai";
 import { BRAND } from "@/config/brand";
+import { cloudConfigured } from "@/services/cloud";
 
 const QUESTIONS = [
   { id: "q1", label: "Buy or rent?", on: true },
@@ -22,10 +23,13 @@ const QUESTIONS = [
 ];
 
 const CHANNELS = [
-  { name: "WhatsApp Business", status: "Connected (demo)" },
-  { name: "Website chat & forms", status: "Connected (demo)" },
-  { name: "Instagram DMs", status: "Connected (demo)" },
-  { name: "Facebook Lead Ads", status: "Connected (demo)" },
+  { name: "Website enquiry form", status: "Connected" },
+  { name: "Local workspace storage", status: "Connected" },
+  { name: "Supabase central database", status: cloudConfigured ? "Connected" : "Available" },
+  { name: "Lead webhook", status: import.meta.env.VITE_LEAD_WEBHOOK_URL ? "Connected" : "Available" },
+  { name: "WhatsApp Business", status: "Available" },
+  { name: "Instagram DMs", status: "Available" },
+  { name: "Facebook Lead Ads", status: "Available" },
   { name: "Property portal enquiries", status: "Available" },
   { name: "CRM sync", status: "Available" },
   { name: "Google / Outlook calendar", status: "Available" },
@@ -39,14 +43,14 @@ export default function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="Settings" description="How the AI assistant behaves for your agency. Changes in this demo apply instantly." />
+      <PageHeader title="Settings" description="Configure how qualification and lead routing work for your agency." />
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <div>
               <CardTitle>Workspace</CardTitle>
-              <CardDescription>Show the demo with the prospect's agency name.</CardDescription>
+              <CardDescription>Set the agency name displayed across the workspace and public enquiry form.</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -81,8 +85,8 @@ export default function SettingsPage() {
             </div>
             <div className="flex items-center justify-between rounded-xl border p-3">
               <div>
-                <p className="text-[13.5px] font-semibold">Reset demo data</p>
-                <p className="text-[12px] text-muted-foreground">Restore all leads, follow-ups and appointments before the next presentation.</p>
+                <p className="text-[13.5px] font-semibold">Reset workspace data</p>
+                <p className="text-[12px] text-muted-foreground">Restore the starter dataset and remove enquiries saved in this browser.</p>
               </div>
               <Button variant="outline" size="sm" onClick={actions.resetDemo}><RotateCcw />Reset</Button>
             </div>
@@ -112,7 +116,7 @@ export default function SettingsPage() {
           <CardHeader>
             <div>
               <CardTitle>Lead scoring</CardTitle>
-              <CardDescription>Demo scoring model. Weights and thresholds are tuned with each agency.</CardDescription>
+              <CardDescription>Transparent rules-based scoring. Weights and thresholds can be tuned for the agency.</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -159,7 +163,7 @@ export default function SettingsPage() {
           <CardHeader>
             <div>
               <CardTitle>Channels & integrations</CardTitle>
-              <CardDescription>In this demo, channels run on sample data. During setup they connect to your real accounts.</CardDescription>
+              <CardDescription>The website form and browser workspace work now. External channels require the agency's own accounts.</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -167,7 +171,7 @@ export default function SettingsPage() {
               {CHANNELS.map((c) => (
                 <li key={c.name} className="flex items-center justify-between gap-3 rounded-xl border p-3">
                   <span className="flex items-center gap-2.5 text-[13.5px] font-medium"><Plug className="size-4 text-muted-foreground" />{c.name}</span>
-                  {c.status.startsWith("Connected") ? <Badge variant="success">{c.status}</Badge> : (
+                  {c.status === "Connected" ? <Badge variant="success">{c.status}</Badge> : (
                     <Button size="sm" variant="outline" onClick={() => actions.toast({ title: `${c.name}`, description: "Connected during onboarding with the AImagino team." })}>Connect</Button>
                   )}
                 </li>

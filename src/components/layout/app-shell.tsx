@@ -17,6 +17,7 @@ import {
   X,
   Zap,
   ArrowUpRight,
+  LogOut,
 } from "lucide-react";
 import { Link, useRouter } from "@/lib/router";
 import { useDemo, useKpis } from "@/store/demo-store";
@@ -28,6 +29,7 @@ import { Popover } from "@/components/ui/popover";
 import { Avatar } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
 import { cn, formatAEDShort, timeAgo } from "@/lib/utils";
+import { cloudConfigured, signOut } from "@/services/cloud";
 
 const NAV = [
   { to: "/app", label: "Overview", icon: LayoutDashboard, exact: true },
@@ -281,13 +283,14 @@ function ProfileMenu() {
     >
       <div className="px-2.5 py-2">
         <p className="text-[13px] font-semibold">{CURRENT_USER.name}</p>
-        <p className="text-[12px] text-muted-foreground">Demo account · sample data</p>
+        <p className="text-[12px] text-muted-foreground">{cloudConfigured ? "Authenticated agency workspace" : "Local workspace · sample data"}</p>
       </div>
       <div className="my-1 h-px bg-border" />
       {[
         { label: "Settings", onClick: () => navigate("/app/settings"), icon: Settings },
         { label: "Product overview", onClick: () => navigate("/"), icon: ArrowUpRight },
-        { label: "Reset demo data", onClick: actions.resetDemo, icon: RotateCcw },
+        { label: cloudConfigured ? "Reset local cache" : "Reset demo data", onClick: actions.resetDemo, icon: RotateCcw },
+        ...(cloudConfigured ? [{ label: "Sign out", onClick: () => { void signOut(); }, icon: LogOut }] : []),
       ].map((i) => (
         <button key={i.label} onClick={() => { i.onClick(); setOpen(false); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] hover:bg-subtle">
           <i.icon className="size-4 text-muted-foreground" />
@@ -327,7 +330,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="lg:hidden"><LogoMark className="size-7" /></span>
             <GlobalSearch className="hidden w-full max-w-md md:block" />
             <div className="ml-auto flex items-center gap-1.5">
-              <DemoBadge className="hidden sm:inline-flex" />
+              {!cloudConfigured ? <DemoBadge className="hidden sm:inline-flex" /> : null}
               <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileSearch((s) => !s)} aria-label="Search">
                 <Search />
               </Button>
@@ -350,7 +353,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
         <main id="main-scroll" className="min-w-0 flex-1 overflow-y-auto">
           <div className="mx-auto w-full max-w-[1320px] px-4 pb-16 pt-5 sm:pt-6 lg:px-6">
-            <div className="mb-4 sm:hidden"><DemoBadge /></div>
+            {!cloudConfigured ? <div className="mb-4 sm:hidden"><DemoBadge /></div> : null}
             {children}
           </div>
         </main>

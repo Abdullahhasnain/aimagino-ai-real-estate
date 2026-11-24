@@ -433,7 +433,7 @@ export default function LandingPage() {
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button size="lg" onClick={() => navigate("/app")}>View Live Demo <ArrowRight /></Button>
-              <Button size="lg" variant="outline" onClick={() => scrollTo("how")}>See How It Works</Button>
+              <Button size="lg" variant="outline" onClick={() => navigate("/enquire")}>Open Enquiry Form</Button>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[13px] text-muted-foreground">
               {[
@@ -621,7 +621,7 @@ export default function LandingPage() {
             <p className="mx-auto mt-4 max-w-2xl text-[15.5px] leading-relaxed text-background/70">{BRAND.supporting}</p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <BookCta className="bg-background text-foreground hover:bg-background/90" />
-              <Button size="lg" variant="outline" className="border-background/25 bg-transparent text-background hover:bg-background/10" onClick={() => navigate("/app")}>View Live Demo <ArrowRight /></Button>
+              <Button size="lg" variant="outline" className="border-background/25 bg-transparent text-background hover:bg-background/10" onClick={() => navigate("/enquire")}>Open Enquiry Form <ArrowRight /></Button>
             </div>
           </div>
         </div>

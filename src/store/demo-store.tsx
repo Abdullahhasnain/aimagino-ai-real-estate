@@ -45,6 +45,7 @@ import {
   summarizeLead,
 } from "@/services/ai";
 import * as api from "@/services/integrations";
+import { cloudConfigured, getCloudClient, loadCloudLeads } from "@/services/cloud";
 import { BRAND } from "@/config/brand";
 import { nextWeekday, sleep, uid } from "@/lib/utils";
 
@@ -90,6 +91,17 @@ interface State {
   flash: Record<string, number>; // leadId → timestamp, for row highlight
 }
 
+export interface NewLeadInput {
+  name: string;
+  phone: string;
+  email: string;
+  message?: string;
+  interest: LeadInterest;
+}
+
+const STORAGE_KEY = "aimagino.workspace.v1";
+type PersistedState = Pick<State, "leads" | "conversations" | "followUps" | "appointments" | "workflows" | "notifications">;
+
 const EMPTY_INTEREST: LeadInterest = {
   bedrooms: null,
   propertyType: null,
@@ -118,7 +130,7 @@ function initialState(): State {
     const l = leads.find((x) => x.id === f.leadId);
     if (l && (!l.nextFollowUp || f.dueAt < l.nextFollowUp)) l.nextFollowUp = f.dueAt;
   }
-  return {
+  const base: State = {
     leads,
     conversations: buildConversations(),
     followUps,
@@ -132,6 +144,22 @@ function initialState(): State {
     agencyName: loadAgencyName(),
     flash: {},
   };
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return base;
+    const parsed = JSON.parse(saved) as Partial<PersistedState>;
+    return {
+      ...base,
+      leads: Array.isArray(parsed.leads) ? parsed.leads : base.leads,
+      conversations: Array.isArray(parsed.conversations) ? parsed.conversations : base.conversations,
+      followUps: Array.isArray(parsed.followUps) ? parsed.followUps : base.followUps,
+      appointments: Array.isArray(parsed.appointments) ? parsed.appointments : base.appointments,
+      workflows: Array.isArray(parsed.workflows) ? parsed.workflows : base.workflows,
+      notifications: Array.isArray(parsed.notifications) ? parsed.notifications : base.notifications,
+    };
+  } catch {
+    return base;
+  }
 }
 
 /* Incoming lead scripts used by "Simulate new lead" (rotates) */
@@ -192,11 +220,64 @@ function useDemoState() {
   const incomingIdx = React.useRef(0);
   const replayToken = React.useRef(0);
 
+  React.useEffect(() => {
+    const persisted: PersistedState = {
+      leads: state.leads,
+      conversations: state.conversations,
+      followUps: state.followUps,
+      appointments: state.appointments,
+      workflows: state.workflows,
+      notifications: state.notifications,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(persisted));
+    } catch {
+      // Storage can be unavailable in private or embedded browsing contexts.
+    }
+  }, [state.leads, state.conversations, state.followUps, state.appointments, state.workflows, state.notifications]);
+
   const set = React.useCallback((fn: (s: State) => State) => {
     const next = fn(ref.current);
     ref.current = next;
     setState(next);
   }, []);
+
+  React.useEffect(() => {
+    if (!cloudConfigured) return;
+    let active = true;
+    const hydrate = async () => {
+      try {
+        const submissions = await loadCloudLeads();
+        if (!active || submissions.length === 0) return;
+        set((current) => {
+          const leadIds = new Set(current.leads.map((lead) => lead.id));
+          const conversationIds = new Set(current.conversations.map((conversation) => conversation.leadId));
+          const newLeads = submissions.map((item) => item.lead).filter((lead) => !leadIds.has(lead.id));
+          const newConversations: Conversation[] = submissions
+            .filter((item) => !conversationIds.has(item.lead.id))
+            .map((item) => ({
+              leadId: item.lead.id,
+              channel: "Website chat",
+              mode: "ai",
+              unread: 1,
+              messages: [{ id: uid("m"), from: "lead", text: item.message, at: item.lead.createdAt }],
+            }));
+          if (newLeads.length === 0 && newConversations.length === 0) return current;
+          return { ...current, leads: [...newLeads, ...current.leads], conversations: [...newConversations, ...current.conversations] };
+        });
+      } catch {
+        // Anonymous visitors cannot read submissions; authenticated users retry on sign-in.
+      }
+    };
+    void getCloudClient()!.auth.getSession().then(({ data }) => { if (data.session) void hydrate(); });
+    const subscription = getCloudClient()!.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") void hydrate();
+    });
+    return () => {
+      active = false;
+      subscription.data.subscription.unsubscribe();
+    };
+  }, [set]);
 
   /* ---------------- helpers ---------------- */
 
@@ -336,6 +417,72 @@ function useDemoState() {
       void api.notifyAgent(agentId, `New lead assigned: ${lead?.name}`);
     },
     [patchLead, addActivity, toast],
+  );
+
+  /** Create a real website enquiry, qualify it, and persist it in the workspace. */
+  const createLead = React.useCallback(
+    async (input: NewLeadInput) => {
+      const id = uid("l");
+      const now = new Date().toISOString();
+      const engagement = 70;
+      const score = scoreLead(input.interest, engagement);
+      const qualified = Boolean(input.interest.intent && input.interest.location && input.interest.budget);
+      const agentId = qualified ? pickAgent(input.interest.location) : null;
+      const lead: Lead = {
+        id,
+        name: input.name.trim(),
+        phone: input.phone.trim(),
+        email: input.email.trim(),
+        source: "Website",
+        language: "English",
+        interest: input.interest,
+        engagement,
+        score,
+        status: qualified ? "qualified" : "contacted",
+        agentId,
+        createdAt: now,
+        lastContact: now,
+        nextFollowUp: null,
+        summary: summarizeLead(input.name.trim(), input.interest),
+        recommendedAction: recommendAction(score, false),
+        activity: [
+          { id: uid("act"), at: now, kind: "created", text: "Website enquiry submitted" },
+          { id: uid("act"), at: now, kind: "scored", text: `Lead scored ${score.total}/100 (${score.temperature.toUpperCase()})` },
+          ...(agentId ? [{ id: uid("act"), at: now, kind: "agent" as const, text: `Automatically assigned to ${AGENTS.find((a) => a.id === agentId)?.name}` }] : []),
+        ],
+        isNew: true,
+      };
+      const enquiryText = input.message?.trim() || `I am looking to ${input.interest.intent?.toLowerCase() ?? "find a property"} in ${input.interest.location ?? "Dubai"}.`;
+      const conversation: Conversation = {
+        leadId: id,
+        channel: "Website chat",
+        mode: "ai",
+        unread: 1,
+        messages: [
+          { id: uid("m"), from: "lead", text: enquiryText, at: now },
+          { id: uid("m"), from: "ai", text: `Thanks ${input.name.trim().split(" ")[0]}. Your requirements have been received. A property consultant will contact you with suitable options.`, at: now },
+        ],
+      };
+      set((s) => ({
+        ...s,
+        leads: [lead, ...s.leads],
+        conversations: [conversation, ...s.conversations],
+        notifications: [{ id: uid("n"), title: `New website lead: ${lead.name}`, body: `${input.interest.location ?? "Location pending"} · ${score.total}/100`, at: now, read: false, tone: score.temperature === "hot" ? "hot" : "primary", link: `/app/leads/${id}` }, ...s.notifications],
+        flash: { ...s.flash, [id]: Date.now() },
+      }));
+
+      try {
+        const delivery = await api.submitLead({ lead, message: enquiryText });
+        const deliveryLabel = delivery.provider === "supabase" ? "saved to central database" : delivery.provider === "api" ? "server integrations completed" : delivery.provider === "webhook" ? "webhook delivered" : "saved locally";
+        addActivity(id, "crm", delivery.provider === "supabase" ? "Enquiry saved to the central workspace database" : delivery.provider === "api" ? "Enquiry delivered to the secure lead API" : delivery.provider === "webhook" ? "Enquiry delivered to the configured lead webhook" : "Enquiry saved to this workspace");
+        toast({ title: "Enquiry received", description: `${lead.name} · score ${score.total}/100 · ${deliveryLabel}`, tone: "success" });
+      } catch {
+        addActivity(id, "note", "Enquiry saved locally; external webhook delivery failed");
+        toast({ title: "Enquiry saved", description: `${lead.name} was saved locally, but the external webhook needs attention.` });
+      }
+      return lead;
+    },
+    [set, addActivity, toast],
   );
 
   /* ---------------- follow-ups ---------------- */
@@ -742,6 +889,7 @@ function useDemoState() {
       toast,
       dismissToast,
       notify,
+      createLead,
       assignAgent,
       runFollowUp,
       scheduleFollowUp,

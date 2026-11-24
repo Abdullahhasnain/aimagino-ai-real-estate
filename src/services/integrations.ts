@@ -7,10 +7,30 @@
  * on these signatures, so no UI code needs to change.
  */
 import { sleep } from "@/lib/utils";
+import type { Lead } from "@/types";
+import { cloudConfigured, saveCloudLead } from "@/services/cloud";
 
 export interface SendResult {
   ok: boolean;
   providerId: string;
+}
+
+export async function submitLead(payload: { lead: Lead; message: string }): Promise<{ ok: boolean; provider: "local" | "webhook" | "supabase" | "api" }> {
+  if (cloudConfigured) {
+    await saveCloudLead(payload);
+    return { ok: true, provider: "supabase" };
+  }
+  const webhookUrl = import.meta.env.VITE_LEAD_WEBHOOK_URL?.trim();
+  const apiUrl = import.meta.env.VITE_LEAD_API_URL?.trim() || (import.meta.env.PROD ? "/api/lead" : "");
+  const endpoint = webhookUrl || apiUrl;
+  if (!endpoint) return { ok: true, provider: "local" };
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(`Lead webhook failed with status ${response.status}`);
+  return { ok: true, provider: webhookUrl ? "webhook" : "api" };
 }
 
 /** WhatsApp Business / Instagram / email outbound message. */
